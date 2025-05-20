@@ -1,0 +1,32 @@
+<launch>
+  <arg name="haarcascade"
+       default="$(find face_detection_recognition)/data/haarcascade_frontalface_default.xml"/>
+  <arg name="encodings"
+       default="$(find face_detection_recognition)/data/encodings.pickle"/>
+
+  <node pkg="usb_cam" type="usb_cam_node" name="usb_cam" output="screen">
+    <param name="video_device"  value="/dev/video2"/>
+    <param name="image_width"   value="640"/>
+    <param name="image_height"  value="480"/>
+    <param name="pixel_format"  value="yuyv"/>
+    <param name="io_method"     value="mmap"/>
+  </node>
+
+  <node pkg="face_detection_recognition"
+        type="face_recognizer.py"
+        name="face_recognizer"
+        output="screen">
+    <param name="haar_path"    value="$(arg haarcascade)"/>
+    <param name="input_image"  value="/usb_cam/image_raw"/>
+    <param name="output_image" value="/face_recognizer/output_image"/>
+    <param name="tolerance"    value="0.6"/>
+  </node>
+  
+  <node pkg="rqt_image_view"
+      type="rqt_image_view"
+      name="face_recognizer_view"
+      args="/face_recognizer/output_image"
+      output="screen"/>
+  
+</launch>
+

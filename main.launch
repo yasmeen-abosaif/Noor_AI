@@ -1,0 +1,58 @@
+<launch>
+  <!-- ############################## -->
+  <!--       Camera Configuration      -->
+  <!-- ############################## -->
+  <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen">
+    <param name="video_device" value="/dev/video2" />
+    <param name="image_width" value="640" />
+    <param name="image_height" value="480" />
+    <param name="pixel_format" value="yuyv" />
+    <param name="camera_frame_id" value="usb_cam" />
+    <param name="io_method" value="mmap"/>
+  </node>
+
+  <!-- ############################## -->
+  <!--      Face Recognition Node      -->
+  <!-- ############################## -->
+  <arg name="haarcascade" default="$(find face_detection_recognition)/data/haarcascade_frontalface_default.xml"/>
+  <arg name="encodings" default="$(find face_detection_recognition)/data/encodings.pickle"/>
+
+  <node pkg="face_detection_recognition" type="face_recognizer.py" name="face_recognizer" output="screen">
+    <param name="haar_path" value="$(arg haarcascade)"/>
+    <param name="input_image" value="/usb_cam/image_raw"/>
+    <param name="output_image" value="/face_recognizer/output_image"/>
+    <param name="tolerance" value="0.6"/>
+    <remap from="/face_recognizer/recognized_faces" to="/User_Data"/>
+  </node>
+
+  <!-- ############################## -->
+  <!-- Emotion & Gender Detection Node -->
+  <!-- ############################## -->
+  <node name="emotion_gender_detector" pkg="emotion_gender_detector" type="perception_node.py" output="screen">
+    <param name="image_topic" value="/usb_cam/image_raw" />
+    <param name="face_detector_backend" value="opencv" />
+    <remap from="/emotion_gender/results" to="/User_Data"/>
+  </node>
+
+  <!-- ############################## -->
+  <!--      Object Detection Node      -->
+  <!-- ############################## -->
+  <arg name="network_param_file" default="$(find darknet_ros)/config/yolov2-tiny.yaml"/>
+  <arg name="ros_param_file" default="$(find darknet_ros)/config/ros.yaml"/>
+
+  <node pkg="darknet_ros" type="darknet_ros" name="darknet_ros" output="screen">
+    <param name="weights_path" value="$(find darknet_ros)/yolo_network_config/weights" />
+    <param name="config_path" value="$(find darknet_ros)/yolo_network_config/cfg" />
+    <rosparam command="load" file="$(arg ros_param_file)"/>
+    <rosparam command="load" file="$(arg network_param_file)"/>
+    <remap from="/camera/rgb/image_raw" to="/usb_cam/image_raw"/>
+    <remap from="/darknet_ros/detections" to="/Object_Data"/>
+  </node>
+
+  <!-- ############################## -->
+  <!--       Visualization Nodes       -->
+  <!-- ############################## -->
+  <node pkg="rqt_image_view" type="rqt_image_view" name="face_recognizer_view" args="/face_recognizer/output_image"/>
+  <node pkg="rqt_image_view" type="rqt_image_view" name="debug_image_view" args="/debug_image"/>
+
+</launch>
